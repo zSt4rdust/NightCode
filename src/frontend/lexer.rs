@@ -98,7 +98,6 @@ pub fn tokenize(source: &String) -> Vec<Token> {
             token = Token::empty(line, ch);
             continue;
         }
-        ch += 1;
 
         if token.kind == TokenKind::UndefinedPunctuation
             && (!is_punctuation(c) || source.len() - 1 == i)
@@ -129,19 +128,15 @@ pub fn tokenize(source: &String) -> Vec<Token> {
                 let token_value = valid_punctuation.as_str();
                 let token_kind = PUNCTUATION_TOKENS.get(token_value).unwrap().clone();
 
-                output.push(Token::new(token_kind, token_value, line, ch));
+                output.push(Token::new(
+                    token_kind,
+                    token_value,
+                    line,
+                    ch - token.value.len() as u32 + (punctuation_idx_buffer - 1) as u32,
+                ));
             }
 
             token = Token::empty(line, ch);
-        }
-
-        if c.is_whitespace() {
-            if token.value != "" {
-                output.push(token);
-                token = Token::empty(line, ch);
-            }
-
-            continue;
         }
 
         if c.is_digit(10) && token.kind != TokenKind::LiteralFloat {
@@ -159,13 +154,23 @@ pub fn tokenize(source: &String) -> Vec<Token> {
             token.kind = TokenKind::UndefinedPunctuation;
         }
 
+        ch += 1;
+        if c.is_whitespace() {
+            if token.value != "" {
+                output.push(token);
+            }
+            token = Token::empty(line, ch);
+
+            continue;
+        }
+
         token.value.push(c);
     }
 
     if token.value != "" {
         output.push(token);
     }
-    output.push(Token::new(TokenKind::EOF, "sabaton", line, ch));
+    output.push(Token::new(TokenKind::EOF, "end of line", line, ch));
 
     output
 }

@@ -16,6 +16,14 @@ impl<'a> Error<'a> {
         }
     }
 
+    pub fn syntax(message: &'a str, location: &'a Location) -> Error<'a> {
+        Self::new(ErrorKind::Syntax_Error, message, location)
+    }
+
+    pub fn parser(message: &'a str, location: &'a Location) -> Error<'a> {
+        Self::new(ErrorKind::Parser_Error, message, location)
+    }
+
     pub fn throw(&self) {
         let error_kind = self.kind.to_string().replace("_", " ");
         println!("{}: {} {}", error_kind, self.message, self.location);

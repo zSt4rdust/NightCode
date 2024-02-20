@@ -1,8 +1,7 @@
-use crate::error::{Error, ErrorKind};
+use crate::error::Error;
 use std::collections::HashMap;
-use std::rc::Rc;
 
-use super::ast::{BinaryOperation, Value, ValueNode};
+use super::ast::{Value, ValueNode};
 use super::lexer::{Token, TokenKind};
 
 use lazy_static::lazy_static;
@@ -34,11 +33,7 @@ pub fn parse_expression(tokens: &Vec<Token>, start: usize) -> Result<ValueNode, 
         };
 
         if token.kind == TokenKind::Undefined || token.kind == TokenKind::UndefinedPunctuation {
-            return Err(Error::new(
-                ErrorKind::Syntax_Error,
-                "found undefined token",
-                &token.location,
-            ));
+            return Err(Error::syntax("found undefined token", &token.location));
         }
 
         if token.kind == TokenKind::LiteralFloat || token.kind == TokenKind::LiteralInteger {
@@ -55,26 +50,17 @@ pub fn parse_literal(token: &Token) -> Result<ValueNode, Error> {
             let parsed = token.value.parse::<i32>();
             match parsed {
                 Ok(val) => Ok(ValueNode::Literal(Value::Integer(val))),
-                Err(_) => Err(Error::new(
-                    ErrorKind::Parser_Error,
-                    "got invalid integer literal",
-                    &token.location,
-                )),
+                Err(_) => Err(Error::parser("invalid integer literal", &token.location)),
             }
         }
         TokenKind::LiteralFloat => {
             let parsed = token.value.parse::<f32>();
             match parsed {
                 Ok(val) => Ok(ValueNode::Literal(Value::SingleFloat(val))),
-                Err(_) => Err(Error::new(
-                    ErrorKind::Parser_Error,
-                    "got invalid float literal",
-                    &token.location,
-                )),
+                Err(_) => Err(Error::parser("invalid float literal", &token.location)),
             }
         }
-        _ => Err(Error::new(
-            ErrorKind::Parser_Error,
+        _ => Err(Error::parser(
             "got non literal token while trying to parse literal",
             &token.location,
         )),

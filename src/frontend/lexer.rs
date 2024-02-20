@@ -1,8 +1,8 @@
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
-use phf::phf_map;
+use lazy_static::lazy_static;
 
-#[derive(strum_macros::Display, PartialEq, Clone)]
+#[derive(strum_macros::Display, PartialEq, Clone, Eq, Hash)]
 pub enum TokenKind {
     LiteralInteger,
     LiteralFloat,
@@ -15,14 +15,16 @@ pub enum TokenKind {
     PunParenOpen,
     PunParenClose,
 
+    Semicolon,
+
     EOF,
     Undefined,
     UndefinedPunctuation,
 }
 
 pub struct Location {
-    line: u32,
-    ch: u32,
+    pub line: u32,
+    pub ch: u32,
 }
 
 impl fmt::Display for Location {
@@ -38,9 +40,9 @@ impl Location {
 }
 
 pub struct Token {
-    kind: TokenKind,
-    value: String,
-    location: Location,
+    pub kind: TokenKind,
+    pub value: String,
+    pub location: Location,
 }
 
 impl fmt::Display for Token {
@@ -71,14 +73,19 @@ impl Token {
     }
 }
 
-static PUNCTUATION_TOKENS: phf::Map<&'static str, TokenKind> = phf_map! {
-    "+" => TokenKind::PunOperatorPlus,
-    "-" => TokenKind::PunOperatorMinus,
-    "*" => TokenKind::PunOperatorMultiply,
-    "/" => TokenKind::PunOperatorDivide,
-    "(" => TokenKind::PunParenOpen,
-    ")" => TokenKind::PunParenClose
-};
+lazy_static! {
+    static ref PUNCTUATION_TOKENS: HashMap<&'static str, TokenKind> = {
+        let mut map = HashMap::new();
+        map.insert("+", TokenKind::PunOperatorPlus);
+        map.insert("-", TokenKind::PunOperatorMinus);
+        map.insert("*", TokenKind::PunOperatorMultiply);
+        map.insert("/", TokenKind::PunOperatorDivide);
+        map.insert("(", TokenKind::PunParenOpen);
+        map.insert(")", TokenKind::PunParenClose);
+        map.insert(";", TokenKind::Semicolon);
+        map
+    };
+}
 
 pub fn tokenize(source: &String) -> Vec<Token> {
     let mut line: u32 = 1;
@@ -87,7 +94,10 @@ pub fn tokenize(source: &String) -> Vec<Token> {
     let mut output: Vec<Token> = Vec::new();
     let mut token = Token::empty(line, ch);
 
-    for (i, c) in source.chars().enumerate() {
+    let mut chars: Vec<char> = source.chars().collect();
+    chars.push('\0');
+
+    for (_i, c) in chars.into_iter().enumerate() {
         if c == '\n' {
             if token.value != "" {
                 output.push(token)
@@ -99,9 +109,7 @@ pub fn tokenize(source: &String) -> Vec<Token> {
             continue;
         }
 
-        if token.kind == TokenKind::UndefinedPunctuation
-            && (!is_punctuation(c) || source.len() - 1 == i)
-        {
+        if token.kind == TokenKind::UndefinedPunctuation && !is_punctuation(c) {
             let mut punctuation_idx_buffer = 0;
 
             loop {
@@ -139,6 +147,14 @@ pub fn tokenize(source: &String) -> Vec<Token> {
             token = Token::empty(line, ch);
         }
 
+        if c == '\0' {
+            if token.value != "" {
+                output.push(token);
+            }
+            token = Token::empty(line, ch);
+            output.push(Token::new(TokenKind::EOF, "\0", line, ch));
+        }
+
         if c.is_digit(10) && token.kind != TokenKind::LiteralFloat {
             token.kind = TokenKind::LiteralInteger;
         } else if c == '.' {
@@ -148,8 +164,8 @@ pub fn tokenize(source: &String) -> Vec<Token> {
         } else if is_punctuation(c) && token.kind != TokenKind::UndefinedPunctuation {
             if token.value != "" {
                 output.push(token);
-                token = Token::empty(line, ch);
             }
+            token = Token::empty(line, ch);
 
             token.kind = TokenKind::UndefinedPunctuation;
         }
@@ -166,11 +182,6 @@ pub fn tokenize(source: &String) -> Vec<Token> {
 
         token.value.push(c);
     }
-
-    if token.value != "" {
-        output.push(token);
-    }
-    output.push(Token::new(TokenKind::EOF, "end of line", line, ch));
 
     output
 }

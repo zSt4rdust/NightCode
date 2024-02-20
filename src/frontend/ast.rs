@@ -1,5 +1,6 @@
-use std::rc::Rc;
+use std::{fmt, rc::Rc};
 
+#[derive(Debug)]
 pub enum Value {
     SingleFloat(f32),
     DoubleFloat(f64),
@@ -17,6 +18,7 @@ pub enum Value {
     SignedByte(i8),
 }
 
+#[derive(strum_macros::Display, Debug)]
 pub enum BinaryOperation {
     Addition,
     Subtraction,
@@ -24,10 +26,12 @@ pub enum BinaryOperation {
     Division,
 }
 
+#[derive(strum_macros::Display, Debug)]
 pub enum UnaryOperation {
     ArithmeticNegation,
 }
 
+#[derive(Debug)]
 pub enum ValueNode {
     Literal(Value),
     UnaryExpression {
@@ -39,4 +43,16 @@ pub enum ValueNode {
         opr: BinaryOperation,
         right: Rc<ValueNode>,
     },
+}
+
+impl core::fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl fmt::Display for ValueNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:#?}", self)
+    }
 }
